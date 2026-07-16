@@ -97,8 +97,6 @@ The JSON response should contain parsed constraints similar to:
 }
 ```
 
-`Derby Family Pantry` should appear in the recommendations.
-
 ### 4. Enter your own query manually
 
 ```powershell
@@ -138,8 +136,6 @@ powershell -NoProfile -ExecutionPolicy Bypass `
   -Query "Where do I find food in Wichita?"
 ```
 
-`-ExecutionPolicy Bypass` applies only to this new PowerShell process. It does not permanently change the machine’s execution policy.
-
 ### 6. Test with your own CSV
 
 ```powershell
@@ -150,7 +146,7 @@ python -m trace_engine.cli `
   --limit 3
 ```
 
-For now, the normalized CSV format requires these columns:
+For now, the normalized CSV format requires these columns to be present:
 
 ```text
 provider_id,name,city,county,zipcode
