@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Compile
+        run: python -m compileall -q src tests scripts
+      - name: Test
+        env:
+          PYTHONPATH: src
+        run: python -m unittest discover -s tests -v
+      - name: Validate committed benchmark
+        env:
+          PYTHONPATH: src
+        run: python -c "from trace_engine.evaluation import load_benchmark; assert len(load_benchmark('benchmarks/synthetic_1000.jsonl')) == 1000"
+      - name: Exercise CLI
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m trace_engine.cli --data data/sample/pantries.csv graph --variant kg3
+          python -m trace_engine.cli --data data/sample/pantries.csv evaluate --benchmark benchmarks/sample.jsonl --variant kg3 --k 3

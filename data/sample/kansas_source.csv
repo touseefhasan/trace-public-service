@@ -1,0 +1,3 @@
+pid,pantry_name,address_cleaned,zipcode,city,county,phone,hours,other_info
+source-001,Example Pantry,"123 Main St,Wichita,KS 67202",67202,Wichita,"Sedgwick County, Kansas",316-555-0199,Monday from 9am-5pm,"No ID required, /category/tefap/"
+source-002,Second Pantry,"456 Oak St,Newton,KS 67114",67114,Newton,"Harvey County, Kansas",,Not available,

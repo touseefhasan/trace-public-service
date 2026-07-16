@@ -1,0 +1,6 @@
+provider_id,name,address,city,county,zipcode,phone,hours,eligibility,source_url,last_verified_at
+ks-001,Sunrise Community Pantry,100 Main St,Wichita,Sedgwick,67202,316-555-0101,Mon 09:00-17:00; Wed 09:00-17:00,No ID required. Open to all Sedgwick County residents.,https://example.org/sunrise,2026-07-01
+ks-002,Westside Food Shelf,200 Oak Ave,Wichita,Sedgwick,67212,316-555-0102,Mon 13:00-18:00; Thu 10:00-15:00,Photo ID required. Bring proof of address.,https://example.org/westside,2026-07-02
+ks-003,Newton Neighbor Pantry,300 Pine Rd,Newton,Harvey,67114,316-555-0103,Tue 09:00-12:00; Fri 09:00-12:00,No ID required. Appointment recommended.,https://example.org/newton,2026-07-03
+ks-004,Derby Family Pantry,400 Market St,Derby,Sedgwick,67037,316-555-0104,Mon 08:00-11:00; Sat 09:00-12:00,Identification required for first visit.,https://example.org/derby,2026-07-04
+ks-005,Evening Hope Center,500 Elm St,Wichita,Sedgwick,67203,316-555-0105,Tue 17:00-20:00; Thu 17:00-20:00,No ID required. Call ahead for large households.,https://example.org/evening-hope,2026-07-05

@@ -1,0 +1,5 @@
+{"query":"Find a pantry in Sedgwick County open Monday at 10am without ID","family":"combined","gold_provider_ids":["ks-001"]}
+{"query":"Which pantries in Sedgwick County require ID?","family":"eligibility","gold_provider_ids":["ks-002","ks-004"]}
+{"query":"What pantry is available in 67114?","family":"location","gold_provider_ids":["ks-003"]}
+{"query":"Is Evening Hope Center open Thursday at 6pm?","family":"recall","gold_provider_ids":["ks-005"]}
+{"query":"Find a pantry in Wichita open Tuesday at 6pm without ID","family":"combined","gold_provider_ids":["ks-005"]}
