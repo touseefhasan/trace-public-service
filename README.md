@@ -1,29 +1,16 @@
 # TRACE Public-Service Retrieval Engine
 
 TRACE is a deterministic, constraint-aware retrieval engine for food-pantry
-directories. This repository captures the complete implementation milestone
-immediately before LLM integration: source-data ingestion, query constraint
-parsing, typed knowledge graphs, grounded retrieval, evidence checks, and
-repeatable evaluation.
+directories. This repository contains the implementation before LLM integration, i.e., only the 'retrieval' part:
 
-It is intentionally usable without an API key, hosted model, vector database,
-or graph database. The command-line interface returns structured JSON whose
-provider facts always come from the loaded directory.
-
-## What is implemented
-
-- Direct ingestion of normalized CSV/JSON files and the original nine-column
-  Kansas Food Source export.
-- Stable provider IDs, source URLs, and verbatim source evidence.
 - A deterministic parser for pantry name, city, county, ZIP code, weekday,
   opening time, and ID-related eligibility constraints.
-- Explicit property graphs with typed nodes, edges, properties, indexes, and
+- Explicit knowledge graphs (KGs) with typed nodes, edges, properties, indexes, and
   graph traversal for the KG-1, KG-2, and KG-3 ablations.
-- Conservative normalization of free-form hours into day/time intervals.
-- Batched candidate retrieval followed by evidence-backed semantic filtering.
+- Normalization of free-form hours into day/time intervals.
+- Batched candidate retrieval followed by semantic filtering.
 - Clarification for queries that lack a usable structural constraint.
-- CLI commands to ask, inspect, export, and evaluate.
-- A validated 1,000-query benchmark and automated tests.
+- A validated 1,000-query benchmark.
 
 ## What is not implemented yet
 
