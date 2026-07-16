@@ -42,7 +42,7 @@ python -m trace_engine.cli `
   --variant kg3
 ```
 
-If Windows opens the Microsoft Store or reports that `python` was not found,
+If `python` is not found,
 use the Python launcher (`py -3.11`) in place of `python`.
 
 Run all tests:
@@ -60,7 +60,7 @@ python -m trace_engine.cli `
   graph --variant kg3
 ```
 
-Use the original Kansas export without modifying or copying it:
+Use the original KansasFoodSource dataset without modifying or copying it:
 
 ```powershell
 python -m trace_engine.cli `
@@ -69,23 +69,18 @@ python -m trace_engine.cli `
   --variant kg3 --limit 3
 ```
 
-See [`docs/cli.md`](docs/cli.md) for every command and an explanation of the
-JSON response.
+## Retrieval (KG) variants
 
-## Retrieval variants
-
-| Variant | Graph-backed exact constraints | Candidate ranking |
-| --- | --- | --- |
-| `kg0` | None | Text overlap across the full directory |
-| `kg1` | Pantry name and location | Text overlap within graph-selected location matches |
-| `kg2` | Pantry name and operating hours | Text overlap within graph-selected schedule matches |
-| `kg3` | Pantry name, location, and operating hours | Text overlap within the intersection of all graph constraints |
+| Variant | Graph constraints |
+| --- | --- |
+| `kg0` | None |
+| `kg1` | Pantry name and location |
+| `kg2` | Pantry name and operating hours |
+| `kg3` | Pantry name, location, and operating hours |
 
 ## Reproducing the benchmark
 
-The repository contains an evaluation-ready 1,000-query JSONL derivative. The
-full 811-row source directory is deliberately not redistributed; point the CLI
-at your authorized local copy:
+The repository contains a 1,000-query JSONL derivative for reproducing the benchmark.
 
 ```powershell
 $env:PYTHONPATH = "src"
@@ -98,14 +93,3 @@ python -m trace_engine.cli `
   --data "C:\path\to\KS Pantries.csv" `
   evaluate --benchmark benchmarks/synthetic_1000.jsonl --variant kg3 --k 3
 ```
-
-## Documentation map
-
-- [`docs/architecture.md`](docs/architecture.md): components and end-to-end data flow.
-- [`docs/knowledge_graph.md`](docs/knowledge_graph.md): graph schema, traversal, and hours coverage.
-- [`docs/pre-llm-status.md`](docs/pre-llm-status.md): completed work, limitations, and LLM handoff.
-- [`docs/cli.md`](docs/cli.md): commands, output fields, and troubleshooting.
-- [`docs/reproducibility.md`](docs/reproducibility.md): clean-room verification procedure.
-- [`data/README.md`](data/README.md): accepted schemas and source-data policy.
-- [`benchmarks/README.md`](benchmarks/README.md): benchmark derivation and validation.
-- [`reports/baseline.md`](reports/baseline.md): current real-data results.
