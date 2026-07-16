@@ -32,80 +32,156 @@ flowchart LR
     T --> O["Structured result"]
 ```
 
-## Quick start
+## Test the retrieval framework locally
 
-Requirements: Python 3.11 or newer. The project has no runtime dependencies.
+This repository currently implements the retrieval part of TRACE - no LLM!
+
+### Requirements
+
+You need:
+
+- Python 3.11 or newer
+- Git, unless you download the repository as a ZIP
+- PowerShell for the commands below
+
+Verify Python:
 
 ```powershell
-cd trace-public-service
-$env:PYTHONPATH = "src"
+python --version
+```
+
+If Windows cannot find `python`, try:
+
+```powershell
+py -3.11 --version
+```
+
+### 1. Download the repository
+
+```powershell
+git clone https://github.com/touseefhasan/trace-public-service.git
+Set-Location trace-public-service
+```
+
+You can also select **Code → Download ZIP** on GitHub, extract the ZIP, and open PowerShell in the extracted directory.
+
+### 2. Configure the Python source path
+
+Run this from the repository root:
+
+```powershell
+$env:PYTHONPATH = Join-Path $PWD "src"
+```
+
+This setting applies to the current PowerShell session. If you open another terminal, run it again.
+
+### 3. Run a sample retrieval query
+
+The repository includes fictional sample pantry data, so you can test retrieval without downloading the full dataset.
+
+```powershell
 python -m trace_engine.cli `
-  --data data/sample/pantries.csv `
-  ask "Find a pantry in Sedgwick County open Monday at 10am without ID" `
-  --variant kg3
+  --data "data/sample/pantries.csv" `
+  ask "Which pantries in Sedgwick County are open Saturday at 10am?" `
+  --variant kg3 `
+  --limit 3
 ```
 
-If `python` is not found,
-use the Python launcher (`py -3.11`) in place of `python`.
+The JSON response should contain parsed constraints similar to:
 
-Run all tests:
+```json
+{
+  "county": "Sedgwick",
+  "day": "saturday",
+  "open_at": "10:00"
+}
+```
+
+`Derby Family Pantry` should appear in the recommendations.
+
+### 4. Enter your own query manually
 
 ```powershell
-$env:PYTHONPATH = "src"
-python -m unittest discover -s tests -v
+$query = Read-Host "Enter your pantry query"
+
+python -m trace_engine.cli `
+  --data "data/sample/pantries.csv" `
+  ask $query `
+  --variant kg3 `
+  --limit 3
 ```
 
-Run a few basic retrieval queries from PowerShell (no LLM or API key):
+Example questions:
+
+```text
+Which pantries are in ZIP code 67114?
+Which pantries in Sedgwick County are open Saturday at 10am?
+Where do I find food in Wichita?
+Where do I find food in Wichita County?
+I need food at 10am
+```
+
+### 5. Use the PowerShell test script
+
+Run the included example queries:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass `
-  -File .\scripts\test_retrieval.ps1
+  -File ".\scripts\test_retrieval.ps1"
 ```
-
-Use an authorized local Kansas directory instead of the sample data:
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass `
-  -File .\scripts\test_retrieval.ps1 `
-  -DataPath "C:\path\to\KS Pantries.csv"
-```
-
-Edit the `$queries` array in the script to try other questions. The script
-automatically locates Python in a Codex workspace; elsewhere, pass
-`-PythonPath`. `-ExecutionPolicy Bypass` applies only to that new PowerShell
-process and does not change the machine's saved policy.
 
 Run one manual query:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass `
-  -File .\scripts\test_retrieval.ps1 `
-  -DataPath "C:\path\to\KS Pantries.csv" `
-  -Query "Which pantries in Sedgwick County are open Saturday at 10am?"
+  -File ".\scripts\test_retrieval.ps1" `
+  -Query "Where do I find food in Wichita?"
 ```
 
-Inspect the sample graph:
+`-ExecutionPolicy Bypass` applies only to this new PowerShell process. It does not permanently change the machine’s execution policy.
+
+### 6. Test with your own CSV
 
 ```powershell
 python -m trace_engine.cli `
-  --data data/sample/pantries.csv `
-  graph --variant kg3
-```
-
-Use the original KansasFoodSource dataset without modifying it:
-
-```powershell
-python -m trace_engine.cli `
-  --data "C:\path\to\KS Pantries.csv" `
+  --data "C:\path\to\your\pantries.csv" `
   ask "Which pantries in Sedgwick County are open Saturday at 10am?" `
-  --variant kg3 --limit 3
+  --variant kg3 `
+  --limit 3
 ```
 
-## Retrieval (KG) variants
+For now, the normalized CSV format requires these columns:
 
-| Variant | Graph constraints |
-| --- | --- |
-| `kg0` | None |
+```text
+provider_id,name,city,county,zipcode
+```
+
+### 7. Inspect the knowledge graph
+
+Print the KG-3 node and edge counts:
+
+```powershell
+python -m trace_engine.cli `
+  --data "data/sample/pantries.csv" `
+  graph `
+  --variant kg3
+```
+
+Export the complete graph:
+
+```powershell
+python -m trace_engine.cli `
+  --data "data/sample/pantries.csv" `
+  graph `
+  --variant kg3 `
+  --output "work/kg3.json"
+```
+
+### Retrieval variants
+
+| Variant | Exact graph constraints |
+|---|---|
+| `kg0` | None|
 | `kg1` | Pantry name and location |
 | `kg2` | Pantry name and operating hours |
 | `kg3` | Pantry name, location, and operating hours |
