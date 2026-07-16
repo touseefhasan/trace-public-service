@@ -29,9 +29,7 @@ flowchart LR
     D -- No --> CD["Ask for weekday"]
     D -- Yes --> T["KG traversal"]
     G --> T
-    T --> R["Text-ranked candidates"]
-    R --> E["Eligibility check"]
-    E --> O["Structured result"]
+    T --> O["Structured result"]
 ```
 
 ## Quick start
