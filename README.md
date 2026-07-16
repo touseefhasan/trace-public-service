@@ -1,6 +1,6 @@
 # TRACE Public-Service Retrieval Engine
 
-TRACE is a deterministic, constraint-aware retrieval engine for food-pantry
+TRACE is a constraint-aware retrieval engine for food-pantry (ideally, any public-service)
 directories. This repository contains the implementation before LLM integration, i.e., only the 'retrieval' part:
 
 - A deterministic parser for pantry name, city, county, ZIP code, weekday,
@@ -11,6 +11,8 @@ directories. This repository contains the implementation before LLM integration,
 - Batched candidate retrieval followed by semantic filtering.
 - Clarification for queries that lack a usable structural constraint.
 - A validated 1,000-query benchmark.
+
+Why hasn't LLM been integrated yet? Well...the key aspect of the TRACE framework is the retrieval process. Retrieval is the cornerstone! LLMs (and a full-fledged chatbot!) coming soon...
 
 ## Architecture at a glance
 
