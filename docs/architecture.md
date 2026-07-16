@@ -10,8 +10,9 @@ from any future natural-language generation layer.
    `Pantry` records. Stable source IDs are preserved.
 2. `ConstraintParser` extracts supported structural and semantic constraints
    from the query using directory-aware matching and regular expressions.
-3. `TraceEngine` returns a clarification if the query has no pantry name,
-   location, or operating-day constraint.
+3. `TraceEngine` returns a location clarification unless the query identifies
+   a city, county, ZIP code, or pantry name. If it supplies a clock time without
+   a weekday, the engine asks for the missing day before retrieval.
 4. `DirectoryRetriever` uses the selected ablation. KG variants traverse the
    materialized graph and intersect matching provider-ID sets.
 5. Candidate records are ranked deterministically by query-token overlap.
@@ -32,9 +33,9 @@ sequenceDiagram
     U->>E: recommend(query, limit)
     E->>C: parse(query)
     C-->>E: QueryConstraints
-    alt no structural constraint
-        E-->>U: clarification-only TraceResult
-    else structural constraint exists
+    alt no location/name anchor, or time has no weekday
+        E-->>U: targeted clarification-only TraceResult
+    else retrieval constraints are complete
         E->>R: retrieve(query, constraints, batch)
         R->>K: candidate_provider_ids(...)
         K-->>R: intersected provider IDs

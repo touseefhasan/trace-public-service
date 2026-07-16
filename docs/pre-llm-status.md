@@ -25,7 +25,8 @@ This is the handoff checkpoint immediately before model integration.
 - Directory-bounded candidate ranking with stable tie-breaking.
 - Conservative time matching and evidence-backed ID eligibility checks.
 - Batched filtering, structured recommendations, and source evidence.
-- Clarification when location/name/day context is absent.
+- Targeted clarification when location/name context is absent or a clock time
+  is supplied without a weekday.
 - Zero out-of-directory provider IDs by construction.
 
 ### Evaluation

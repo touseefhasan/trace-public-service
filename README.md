@@ -21,7 +21,8 @@ provider facts always come from the loaded directory.
   graph traversal for the KG-1, KG-2, and KG-3 ablations.
 - Conservative normalization of free-form hours into day/time intervals.
 - Batched candidate retrieval followed by evidence-backed semantic filtering.
-- Clarification for queries that lack a usable structural constraint.
+- Location clarification when a query lacks a city, county, ZIP code, or named
+  provider, plus weekday clarification when a time is supplied without a day.
 - CLI commands to ask, inspect, export, and evaluate.
 - A validated 1,000-query benchmark and automated tests.
 
@@ -80,6 +81,35 @@ Run all tests:
 ```powershell
 $env:PYTHONPATH = "src"
 python -m unittest discover -s tests -v
+```
+
+Run a few basic retrieval queries from PowerShell (no LLM or API key):
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass `
+  -File .\scripts\test_retrieval.ps1
+```
+
+Use an authorized local Kansas directory instead of the sample data:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass `
+  -File .\scripts\test_retrieval.ps1 `
+  -DataPath "C:\path\to\KS Pantries.csv"
+```
+
+Edit the `$queries` array in the script to try other questions. The script
+automatically locates Python in a Codex workspace; elsewhere, pass
+`-PythonPath`. `-ExecutionPolicy Bypass` applies only to that new PowerShell
+process and does not change the machine's saved policy.
+
+Run one manual query:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass `
+  -File .\scripts\test_retrieval.ps1 `
+  -DataPath "C:\path\to\KS Pantries.csv" `
+  -Query "Which pantries in Sedgwick County are open Saturday at 10am?"
 ```
 
 Inspect the sample graph:

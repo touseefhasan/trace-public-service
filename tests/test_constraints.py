@@ -5,6 +5,7 @@ from pathlib import Path
 
 from trace_engine.constraints import ConstraintParser
 from trace_engine.ingestion import load_directory
+from trace_engine.models import Pantry
 from trace_engine.normalization import normalize_text
 
 
@@ -36,6 +37,40 @@ class ConstraintParserTests(unittest.TestCase):
         constraints = self.parser.parse("Pantries in Sedgwick County")
         self.assertEqual(constraints.county, "Sedgwick")
         self.assertIsNone(constraints.city)
+
+    def test_unqualified_ambiguous_place_name_defaults_to_city(self) -> None:
+        parser = ConstraintParser(
+            (
+                Pantry("1", "Wichita City Pantry", "", "Wichita", "Sedgwick", "67202"),
+                Pantry("2", "Wichita County Pantry", "", "Leoti", "Wichita", "67861"),
+                Pantry("3", "Sedgwick City Pantry", "", "Sedgwick", "Harvey", "67135"),
+            )
+        )
+
+        wichita = parser.parse("Where do I find food in Wichita?")
+        self.assertEqual(wichita.city, "Wichita")
+        self.assertIsNone(wichita.county)
+
+        sedgwick = parser.parse("Where do I find food in Sedgwick?")
+        self.assertEqual(sedgwick.city, "Sedgwick")
+        self.assertIsNone(sedgwick.county)
+
+    def test_ambiguous_place_name_requires_county_keyword_for_county(self) -> None:
+        parser = ConstraintParser(
+            (
+                Pantry("1", "Wichita City Pantry", "", "Wichita", "Sedgwick", "67202"),
+                Pantry("2", "Wichita County Pantry", "", "Leoti", "Wichita", "67861"),
+                Pantry("3", "Sedgwick City Pantry", "", "Sedgwick", "Harvey", "67135"),
+            )
+        )
+
+        wichita = parser.parse("Food pantries in Wichita County")
+        self.assertEqual(wichita.county, "Wichita")
+        self.assertIsNone(wichita.city)
+
+        sedgwick = parser.parse("Food pantries in Sedgwick County")
+        self.assertEqual(sedgwick.county, "Sedgwick")
+        self.assertIsNone(sedgwick.city)
 
 
 if __name__ == "__main__":
