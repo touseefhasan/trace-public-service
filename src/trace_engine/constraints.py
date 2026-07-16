@@ -58,8 +58,12 @@ class ConstraintParser:
         if city and county and normalize_location(city) == normalize_location(county):
             county_phrase = rf"\b{re.escape(normalize_location(county))}\s+county\b"
             city_phrase = rf"\b(?:city of|in the city of)\s+{re.escape(normalize_location(city))}\b"
-            if re.search(county_phrase, normalized) and not re.search(city_phrase, normalized):
+            county_is_explicit = re.search(county_phrase, normalized) is not None
+            city_is_explicit = re.search(city_phrase, normalized) is not None
+            if county_is_explicit and not city_is_explicit:
                 city = None
+            elif city_is_explicit or not county_is_explicit:
+                county = None
 
         day = None
         for alias, canonical in DAY_ALIASES.items():

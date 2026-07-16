@@ -49,6 +49,11 @@ class QueryConstraints:
     semantic: tuple[str, ...] = ()
 
     @property
+    def has_retrieval_anchor(self) -> bool:
+        """Whether the query identifies a geographic area or named provider."""
+        return any((self.city, self.county, self.zipcode, self.provider_name))
+
+    @property
     def has_structural_constraint(self) -> bool:
         return any(
             (

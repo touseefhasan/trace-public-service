@@ -8,7 +8,17 @@ from .retrieval import DirectoryRetriever
 from .semantic import check_semantic_constraints
 
 
-CLARIFICATION = "What nearby ZIP code, city, county, pantry name, or operating day should I use?"
+LOCATION_CLARIFICATION = (
+    "Where are you looking for food? Please provide a city, county, or ZIP code."
+)
+
+
+def clarification_for(constraints: QueryConstraints) -> str | None:
+    if not constraints.has_retrieval_anchor:
+        return LOCATION_CLARIFICATION
+    if constraints.open_at and not constraints.day:
+        return f"Which day should I check for availability at {constraints.open_at}?"
+    return None
 
 
 class TraceEngine:
@@ -30,12 +40,13 @@ class TraceEngine:
             raise ValueError("limit, batch_size, and max_batches must be positive")
 
         constraints = self.parser.parse(query)
-        if not constraints.has_structural_constraint:
+        clarification = clarification_for(constraints)
+        if clarification:
             return TraceResult(
                 query=query,
                 variant=self.variant,
                 constraints=constraints,
-                clarification=CLARIFICATION,
+                clarification=clarification,
             )
 
         recommendations: list[Recommendation] = []

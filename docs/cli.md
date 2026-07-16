@@ -26,7 +26,8 @@ The JSON response includes:
 
 - `query` and `variant`: the executed request and ablation.
 - `constraints`: parsed name, location, day/time, and semantic constraints.
-- `clarification`: a question when the request lacks structural context,
+- `clarification`: a targeted question when the request lacks a city, county,
+  ZIP code, or pantry-name anchor, or when a clock time lacks a weekday;
   otherwise `null`.
 - `candidates_examined`: directory records checked before completion.
 - `recommendations`: grounded records, matched constraints, evidence, and score.

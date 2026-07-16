@@ -27,8 +27,43 @@ class TraceEngineTests(unittest.TestCase):
 
     def test_asks_for_clarification_without_structural_constraint(self) -> None:
         result = TraceEngine(self.providers, "kg3").recommend("I need food assistance")
-        self.assertIsNotNone(result.clarification)
+        self.assertEqual(
+            result.clarification,
+            "Where are you looking for food? Please provide a city, county, or ZIP code.",
+        )
         self.assertEqual(result.recommendations, ())
+
+    def test_time_without_location_asks_for_location(self) -> None:
+        result = TraceEngine(self.providers, "kg3").recommend("I need food at 10am")
+        self.assertEqual(result.constraints.open_at, "10:00")
+        self.assertEqual(
+            result.clarification,
+            "Where are you looking for food? Please provide a city, county, or ZIP code.",
+        )
+        self.assertEqual(result.recommendations, ())
+        self.assertEqual(result.candidates_examined, 0)
+
+    def test_location_and_time_without_day_asks_for_day(self) -> None:
+        result = TraceEngine(self.providers, "kg3").recommend(
+            "I need food in Wichita at 10am"
+        )
+        self.assertEqual(result.constraints.city, "Wichita")
+        self.assertEqual(result.constraints.open_at, "10:00")
+        self.assertEqual(
+            result.clarification,
+            "Which day should I check for availability at 10:00?",
+        )
+        self.assertEqual(result.recommendations, ())
+
+    def test_named_provider_is_a_retrieval_anchor(self) -> None:
+        result = TraceEngine(self.providers, "kg3").recommend(
+            "Tell me about Sunrise Community Pantry"
+        )
+        self.assertIsNone(result.clarification)
+        self.assertEqual(
+            [item.provider.provider_id for item in result.recommendations],
+            ["ks-001"],
+        )
 
     def test_semantic_filter_fetches_later_batches(self) -> None:
         result = TraceEngine(self.providers, "kg1").recommend(
