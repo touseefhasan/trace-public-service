@@ -16,24 +16,18 @@ directories. This repository contains the implementation before LLM integration,
 
 ```mermaid
 flowchart LR
-    S["CSV or JSON directory"] --> I["Schema adapter and normalization"]
-    I --> P["Typed Pantry records"]
+    S["CSV or JSON directory"] --> I["Schema normalization"]
+    I --> P["Pantry records"]
     P --> G["KG-1 / KG-2 / KG-3 property graph"]
     Q["User query"] --> C["Deterministic constraint parser"]
     C --> X{"Structural constraint?"}
     X -- No --> CL["Clarification"]
-    X -- Yes --> T["Typed graph traversal"]
+    X -- Yes --> T["KG traversal"]
     G --> T
     T --> R["Text-ranked candidates"]
-    R --> E["Eligibility evidence check"]
-    E --> O["Grounded structured result"]
+    R --> E["Eligibility check"]
+    E --> O["Structured result"]
 ```
-
-The graph is not a label for field filtering. Query execution resolves graph
-nodes, traverses typed incoming edges, intersects provider-ID sets using strict
-AND semantics, and ranks only the resulting candidates. Full design details
-are in [`docs/architecture.md`](docs/architecture.md) and
-[`docs/knowledge_graph.md`](docs/knowledge_graph.md).
 
 ## Quick start
 
@@ -49,9 +43,7 @@ python -m trace_engine.cli `
 ```
 
 If Windows opens the Microsoft Store or reports that `python` was not found,
-use the Python launcher (`py -3.11`) in place of `python`. In a Codex desktop
-workspace, the bundled Python executable reported by the workspace runtime can
-also be used directly.
+use the Python launcher (`py -3.11`) in place of `python`.
 
 Run all tests:
 
