@@ -129,18 +129,6 @@ python -m trace_engine.cli `
   evaluate --benchmark benchmarks/synthetic_1000.jsonl --variant kg3 --k 3
 ```
 
-The measured baseline and its interpretation are in
-[`reports/baseline.md`](reports/baseline.md). The scores are implementation
-baselines, not a claim of reproducing the paper's final results.
-
-## Grounding and safety contract
-
-Every recommendation contains a complete `Pantry` record selected by stable ID
-from the loaded directory. Evidence is copied from source fields; the engine
-does not invent providers, hours, eligibility rules, or contact details. A
-future LLM layer must treat these structured records as the only allowed source
-for rendered provider facts and must preserve the existing clarification path.
-
 ## Documentation map
 
 - [`docs/architecture.md`](docs/architecture.md): components and end-to-end data flow.
