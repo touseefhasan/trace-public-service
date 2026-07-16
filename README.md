@@ -12,15 +12,6 @@ directories. This repository contains the implementation before LLM integration,
 - Clarification for queries that lack a usable structural constraint.
 - A validated 1,000-query benchmark.
 
-## What is not implemented yet
-
-This milestone is not yet a natural-language chatbot. It has no LLM provider,
-prompting layer, embeddings, vector index, generated prose, conversation
-memory, HTTP API, or web UI. Its token-overlap score is a deterministic ranking
-signal, not an embedding similarity or confidence probability. See
-[`docs/pre-llm-status.md`](docs/pre-llm-status.md) for the exact integration
-boundary and next work.
-
 ## Architecture at a glance
 
 ```mermaid
