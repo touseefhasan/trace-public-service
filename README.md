@@ -175,9 +175,15 @@ python -m trace_engine.cli `
 
 ### Retrieval variants
 
-| Variant | Exact graph constraints |
+| Variant | Graph constraints |
 |---|---|
-| `kg0` | None|
+| `kg0` | None |
 | `kg1` | Pantry name and location |
-| `kg2` | Pantry name and operating hours |
-| `kg3` | Pantry name, location, and operating hours |
+| `kg2` | Pantry name and hours |
+| `kg3` | Pantry name, location, and hours |
+
+### Up next...
+
+<img width="859" height="471" alt="image" src="https://github.com/user-attachments/assets/3cce002b-151e-42ee-b7bb-eae92cab5ead" />
+
+According to our architecture, the retrieved records are then passed along to the LLM for final response generation that goes to the user in the end. So the next step is to include the LLM pipeline and close the loop.
