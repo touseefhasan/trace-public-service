@@ -54,16 +54,41 @@ foreach ($query in $queries) {
     }
 
     Write-Host "RECOMMENDATIONS"
-    @($result.recommendations) |
-        Select-Object `
-            @{Name = "ProviderId"; Expression = { $_.provider.provider_id }},
-            @{Name = "Name"; Expression = { $_.provider.name }},
-            @{Name = "Category"; Expression = { $_.provider.category }},
-            @{Name = "City"; Expression = { $_.provider.city }},
-            @{Name = "County"; Expression = { $_.provider.county }},
-            @{Name = "Hours"; Expression = { $_.provider.hours }},
-            score |
-        Format-Table -Wrap -AutoSize
+    $recommendations = @($result.recommendations)
+    if (-not $recommendations) {
+        Write-Host "No matching providers found." -ForegroundColor Yellow
+    }
+    else {
+        for ($index = 0; $index -lt $recommendations.Count; $index++) {
+            $provider = $recommendations[$index].provider
+            Write-Host ""
+            Write-Host "$($index + 1). $($provider.name)" -ForegroundColor Green
+            Write-Host "   Provider ID : $($provider.provider_id)"
+            if ($provider.organization -and $provider.organization -ne $provider.name) {
+                Write-Host "   Organization: $($provider.organization)"
+            }
+            if ($provider.category) {
+                Write-Host "   Category    : $($provider.category)"
+            }
+            if ($provider.address) {
+                Write-Host "   Address     : $($provider.address)"
+            }
+            $location = @($provider.city, $provider.county, $provider.zipcode) |
+                Where-Object { $_ }
+            if ($location) {
+                Write-Host "   Location    : $($location -join ', ')"
+            }
+            if ($provider.phone) {
+                Write-Host "   Phone       : $($provider.phone)"
+            }
+            if ($provider.hours) {
+                Write-Host "   Hours       : $($provider.hours)"
+            }
+            if ($provider.source_url) {
+                Write-Host "   Source      : $($provider.source_url)"
+            }
+        }
+    }
 
     Write-Host "Candidates examined: $($result.candidates_examined)"
 }
