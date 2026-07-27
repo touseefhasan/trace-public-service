@@ -12,6 +12,7 @@ authors = [{ name = "TRACE contributors" }]
 dependencies = []
 
 [project.scripts]
+trace-service = "trace_engine.cli:main"
 trace-pantry = "trace_engine.cli:main"
 
 [tool.setuptools.packages.find]

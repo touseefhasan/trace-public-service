@@ -13,7 +13,11 @@ from .retrieval import VARIANT_FIELDS
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="TRACE public-service retrieval engine")
-    parser.add_argument("--data", required=True, help="Path to a CSV or JSON provider directory")
+    parser.add_argument(
+        "--data",
+        required=True,
+        help="Path to a CSV, JSON, or XLSX service-provider directory",
+    )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     ask = subparsers.add_parser("ask", help="Retrieve grounded recommendations")

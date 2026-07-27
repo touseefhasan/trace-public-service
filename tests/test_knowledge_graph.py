@@ -21,10 +21,12 @@ class KnowledgeGraphTests(unittest.TestCase):
     def test_kg1_materializes_location_nodes_and_edges(self) -> None:
         graph = build_knowledge_graph(self.providers, "kg1")
         summary = graph.summary()
-        self.assertEqual(summary["node_kinds"]["Pantry"], 5)
+        self.assertEqual(summary["node_kinds"]["ServiceProvider"], 5)
+        self.assertEqual(summary["node_kinds"]["ServiceCategory"], 1)
         self.assertEqual(summary["relations"]["LOCATED_IN_CITY"], 5)
         self.assertEqual(summary["relations"]["LOCATED_IN_COUNTY"], 5)
         self.assertEqual(summary["relations"]["LOCATED_IN_ZIPCODE"], 5)
+        self.assertEqual(summary["relations"]["IN_CATEGORY"], 5)
         self.assertNotIn("Hours", summary["node_kinds"])
 
     def test_kg2_traverses_hours_intervals(self) -> None:

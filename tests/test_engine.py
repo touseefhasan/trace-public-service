@@ -5,6 +5,7 @@ from pathlib import Path
 
 from trace_engine.engine import TraceEngine
 from trace_engine.ingestion import load_directory
+from trace_engine.models import ServiceProvider
 
 
 SAMPLE_DATA = Path(__file__).parents[1] / "data" / "sample" / "pantries.csv"
@@ -81,6 +82,67 @@ class TraceEngineTests(unittest.TestCase):
         known_ids = {provider.provider_id for provider in self.providers}
         result = TraceEngine(self.providers, "kg0").recommend("Pantry near Wichita", limit=5)
         self.assertTrue({item.provider.provider_id for item in result.recommendations} <= known_ids)
+
+    def test_category_and_derived_city_retrieve_relevant_services(self) -> None:
+        providers = (
+            ServiceProvider(
+                "shelter",
+                "Downtown Emergency Shelter",
+                city="Wichita",
+                county="Sedgwick",
+                zipcode="67202",
+                category="Housing & Shelter",
+                description="Emergency overnight shelter for adults.",
+            ),
+            ServiceProvider(
+                "internet",
+                "Internet Access Program",
+                city="Wichita",
+                county="Sedgwick",
+                zipcode="67211",
+                category="Housing & Shelter",
+                description="Free mobile hotspots for students.",
+            ),
+            ServiceProvider(
+                "food",
+                "Community Food Pantry",
+                city="Wichita",
+                county="Sedgwick",
+                zipcode="67214",
+                category="Food",
+            ),
+        )
+        result = TraceEngine(providers, "kg3").recommend(
+            "Where do I find shelter in Wichita?"
+        )
+        self.assertEqual(result.constraints.city, "Wichita")
+        self.assertEqual(result.constraints.category, "Housing & Shelter")
+        self.assertEqual(result.recommendations[0].provider.provider_id, "shelter")
+        self.assertTrue(
+            all(
+                item.provider.category == "Housing & Shelter"
+                for item in result.recommendations
+            )
+        )
+
+    def test_service_category_without_location_requests_location(self) -> None:
+        providers = (
+            ServiceProvider(
+                "one",
+                "Example Shelter",
+                city="Wichita",
+                category="Housing & Shelter",
+            ),
+        )
+        result = TraceEngine(providers, "kg3").recommend("I need shelter")
+        self.assertEqual(result.constraints.category, "Housing & Shelter")
+        self.assertEqual(
+            result.clarification,
+            (
+                "Where are you looking for Housing & Shelter services? "
+                "Please provide a city, county, or ZIP code."
+            ),
+        )
 
 
 if __name__ == "__main__":

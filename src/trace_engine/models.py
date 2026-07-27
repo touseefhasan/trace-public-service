@@ -5,20 +5,29 @@ from typing import Any
 
 
 @dataclass(frozen=True, slots=True)
-class Pantry:
-    """A normalized provider record retained alongside its source provenance."""
+class ServiceProvider:
+    """A normalized public-service listing retained with source provenance."""
 
     provider_id: str
     name: str
-    address: str
-    city: str
-    county: str
-    zipcode: str
+    address: str = ""
+    city: str = ""
+    county: str = ""
+    zipcode: str = ""
+    organization: str = ""
+    description: str = ""
+    category: str = ""
+    state: str = ""
     phone: str = ""
+    email: str = ""
     hours: str = ""
     eligibility: str = ""
+    application_process: str = ""
+    required_documents: str = ""
+    fees: str = ""
     source_url: str = ""
     last_verified_at: str = ""
+    location_source: str = ""
 
     def as_dict(self) -> dict[str, str]:
         return asdict(self)
@@ -28,14 +37,27 @@ class Pantry:
         return " ".join(
             (
                 self.name,
+                self.organization,
+                self.description,
+                self.category,
                 self.address,
                 self.city,
+                self.state,
                 self.county,
                 self.zipcode,
+                self.phone,
+                self.email,
                 self.hours,
                 self.eligibility,
+                self.application_process,
+                self.required_documents,
+                self.fees,
             )
         )
+
+
+# Backward-compatible import for existing callers and published examples.
+Pantry = ServiceProvider
 
 
 @dataclass(frozen=True, slots=True)
@@ -44,6 +66,7 @@ class QueryConstraints:
     county: str | None = None
     zipcode: str | None = None
     provider_name: str | None = None
+    category: str | None = None
     day: str | None = None
     open_at: str | None = None
     semantic: tuple[str, ...] = ()
@@ -61,6 +84,7 @@ class QueryConstraints:
                 self.county,
                 self.zipcode,
                 self.provider_name,
+                self.category,
                 self.day,
                 self.open_at,
             )
@@ -74,7 +98,7 @@ class QueryConstraints:
 
 @dataclass(frozen=True, slots=True)
 class Recommendation:
-    provider: Pantry
+    provider: ServiceProvider
     matched_constraints: tuple[str, ...]
     supporting_evidence: tuple[str, ...]
     score: float

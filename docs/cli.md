@@ -7,7 +7,8 @@ $env:PYTHONPATH = "src"
 python -m trace_engine.cli --data <directory> <command> [options]
 ```
 
-`--data` is required for every command and accepts a CSV or JSON directory.
+`--data` is required for every command and accepts a CSV, JSON, or XLSX
+directory.
 
 ## `ask`
 
@@ -25,15 +26,27 @@ python -m trace_engine.cli `
 The JSON response includes:
 
 - `query` and `variant`: the executed request and ablation.
-- `constraints`: parsed name, location, day/time, and semantic constraints.
+- `constraints`: parsed name, service category, location, day/time, and semantic
+  constraints.
 - `clarification`: a targeted question when the request lacks a city, county,
-  ZIP code, or pantry-name anchor, or when a clock time lacks a weekday;
+  ZIP code, or provider-name anchor, or when a clock time lacks a weekday;
   otherwise `null`.
 - `candidates_examined`: directory records checked before completion.
 - `recommendations`: grounded records, matched constraints, evidence, and score.
 
-The score is lexical token overlap divided by the number of query tokens. It is
-useful for deterministic ordering but should not be read as probability.
+The score is a deterministic weighted token-overlap score. Provider-name
+matches receive the strongest weight, category matches receive the next
+strongest weight, and the full normalized record supplies supporting lexical
+matches. It should not be read as probability.
+
+Example with an XLSX public-service directory:
+
+```powershell
+python -m trace_engine.cli `
+  --data "C:\path\to\211_Sample_Dataset.xlsx" `
+  ask "Where do I find shelter in Wichita?" `
+  --variant kg3 --limit 3
+```
 
 ## `list`
 

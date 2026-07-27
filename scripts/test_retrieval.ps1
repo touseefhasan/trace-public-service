@@ -58,6 +58,7 @@ foreach ($query in $queries) {
         Select-Object `
             @{Name = "ProviderId"; Expression = { $_.provider.provider_id }},
             @{Name = "Name"; Expression = { $_.provider.name }},
+            @{Name = "Category"; Expression = { $_.provider.category }},
             @{Name = "City"; Expression = { $_.provider.city }},
             @{Name = "County"; Expression = { $_.provider.county }},
             @{Name = "Hours"; Expression = { $_.provider.hours }},

@@ -5,7 +5,7 @@ from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
-from .models import Pantry, QueryConstraints
+from .models import QueryConstraints, ServiceProvider
 from .normalization import normalize_location, normalize_text, parse_clock, parse_hours
 
 
@@ -93,24 +93,27 @@ def _node_id(kind: str, value: str) -> str:
     return f"{kind.casefold()}:{normalize_text(value)}"
 
 
-def build_knowledge_graph(providers: Sequence[Pantry], variant: str) -> PropertyGraph:
+def build_knowledge_graph(
+    providers: Sequence[ServiceProvider], variant: str
+) -> PropertyGraph:
     if variant not in {"kg1", "kg2", "kg3"}:
         raise ValueError("knowledge graphs are available for kg1, kg2, and kg3")
 
     include_location = variant in {"kg1", "kg3"}
+    include_category = variant in {"kg1", "kg3"}
     include_hours = variant in {"kg2", "kg3"}
     graph = PropertyGraph()
 
-    for pantry in providers:
-        pantry_id = f"pantry:{pantry.provider_id}"
+    for provider in providers:
+        provider_id = f"provider:{provider.provider_id}"
         graph.add_node(
             GraphNode(
-                pantry_id,
-                "Pantry",
+                provider_id,
+                "ServiceProvider",
                 {
-                    "provider_id": pantry.provider_id,
-                    "name": pantry.name,
-                    "normalized_name": normalize_text(pantry.name),
+                    "provider_id": provider.provider_id,
+                    "name": provider.name,
+                    "normalized_name": normalize_text(provider.name),
                 },
             )
         )
@@ -119,41 +122,61 @@ def build_knowledge_graph(providers: Sequence[Pantry], variant: str) -> Property
             location_nodes = (
                 (
                     GraphNode(
-                        _node_id("city", pantry.city),
+                        _node_id("city", provider.city),
                         "City",
-                        {"name": pantry.city, "normalized_name": normalize_location(pantry.city)},
+                        {
+                            "name": provider.city,
+                            "normalized_name": normalize_location(provider.city),
+                        },
                     ),
                     "LOCATED_IN_CITY",
+                    provider.city,
                 ),
                 (
                     GraphNode(
-                        _node_id("county", pantry.county),
+                        _node_id("county", provider.county),
                         "County",
                         {
-                            "name": pantry.county,
-                            "normalized_name": normalize_location(pantry.county),
+                            "name": provider.county,
+                            "normalized_name": normalize_location(provider.county),
                         },
                     ),
                     "LOCATED_IN_COUNTY",
+                    provider.county,
                 ),
                 (
                     GraphNode(
-                        _node_id("zipcode", pantry.zipcode),
+                        _node_id("zipcode", provider.zipcode),
                         "ZipCode",
-                        {"value": pantry.zipcode},
+                        {"value": provider.zipcode},
                     ),
                     "LOCATED_IN_ZIPCODE",
+                    provider.zipcode,
                 ),
             )
-            for node, relation in location_nodes:
+            for node, relation, value in location_nodes:
+                if not value:
+                    continue
                 graph.add_node(node)
-                graph.add_edge(GraphEdge(pantry_id, relation, node.node_id))
+                graph.add_edge(GraphEdge(provider_id, relation, node.node_id))
+
+        if include_category and provider.category:
+            category_node = GraphNode(
+                _node_id("category", provider.category),
+                "ServiceCategory",
+                {
+                    "name": provider.category,
+                    "normalized_name": normalize_text(provider.category),
+                },
+            )
+            graph.add_node(category_node)
+            graph.add_edge(GraphEdge(provider_id, "IN_CATEGORY", category_node.node_id))
 
         if include_hours:
-            hours_id = f"hours:{pantry.provider_id}"
-            graph.add_node(GraphNode(hours_id, "Hours", {"raw_text": pantry.hours}))
-            graph.add_edge(GraphEdge(pantry_id, "HAS_HOURS", hours_id))
-            for day, intervals in parse_hours(pantry.hours).items():
+            hours_id = f"hours:{provider.provider_id}"
+            graph.add_node(GraphNode(hours_id, "Hours", {"raw_text": provider.hours}))
+            graph.add_edge(GraphEdge(provider_id, "HAS_HOURS", hours_id))
+            for day, intervals in parse_hours(provider.hours).items():
                 day_node = GraphNode(_node_id("day", day), "Day", {"name": day})
                 graph.add_node(day_node)
                 for start, end in intervals:
@@ -169,7 +192,7 @@ def build_knowledge_graph(providers: Sequence[Pantry], variant: str) -> Property
 
 
 class KnowledgeGraphQuery:
-    """Traverse graph relations and intersect the resulting pantry node sets."""
+    """Traverse graph relations and intersect the resulting provider node sets."""
 
     def __init__(self, graph: PropertyGraph) -> None:
         self.graph = graph
@@ -178,11 +201,15 @@ class KnowledgeGraphQuery:
     def _provider_ids(nodes: Iterable[GraphNode]) -> set[str]:
         return {str(node.properties["provider_id"]) for node in nodes}
 
-    def _pantries_incoming_to(self, nodes: Iterable[GraphNode], relation: str) -> set[str]:
-        pantry_node_ids = {
+    def _providers_incoming_to(
+        self, nodes: Iterable[GraphNode], relation: str
+    ) -> set[str]:
+        provider_node_ids = {
             edge.source for node in nodes for edge in self.graph.incoming(node.node_id, relation)
         }
-        return self._provider_ids(self.graph.nodes[node_id] for node_id in pantry_node_ids)
+        return self._provider_ids(
+            self.graph.nodes[node_id] for node_id in provider_node_ids
+        )
 
     def _hours_candidates(self, day: str | None, open_at: str | None) -> set[str]:
         if not day:
@@ -200,12 +227,14 @@ class KnowledgeGraphQuery:
                     start is not None and end is not None and start <= minute < end
                 ):
                     hours_ids.add(edge.source)
-        pantry_node_ids = {
+        provider_node_ids = {
             edge.source
             for hours_id in hours_ids
             for edge in self.graph.incoming(hours_id, "HAS_HOURS")
         }
-        return self._provider_ids(self.graph.nodes[node_id] for node_id in pantry_node_ids)
+        return self._provider_ids(
+            self.graph.nodes[node_id] for node_id in provider_node_ids
+        )
 
     def candidate_provider_ids(
         self,
@@ -217,13 +246,15 @@ class KnowledgeGraphQuery:
             filters.append(
                 self._provider_ids(
                     self.graph.find_nodes(
-                        "Pantry", "normalized_name", normalize_text(constraints.provider_name)
+                        "ServiceProvider",
+                        "normalized_name",
+                        normalize_text(constraints.provider_name),
                     )
                 )
             )
         if "city" in exact_fields and constraints.city:
             filters.append(
-                self._pantries_incoming_to(
+                self._providers_incoming_to(
                     self.graph.find_nodes(
                         "City", "normalized_name", normalize_location(constraints.city)
                     ),
@@ -232,7 +263,7 @@ class KnowledgeGraphQuery:
             )
         if "county" in exact_fields and constraints.county:
             filters.append(
-                self._pantries_incoming_to(
+                self._providers_incoming_to(
                     self.graph.find_nodes(
                         "County", "normalized_name", normalize_location(constraints.county)
                     ),
@@ -241,9 +272,20 @@ class KnowledgeGraphQuery:
             )
         if "zipcode" in exact_fields and constraints.zipcode:
             filters.append(
-                self._pantries_incoming_to(
+                self._providers_incoming_to(
                     self.graph.find_nodes("ZipCode", "value", constraints.zipcode),
                     "LOCATED_IN_ZIPCODE",
+                )
+            )
+        if "category" in exact_fields and constraints.category:
+            filters.append(
+                self._providers_incoming_to(
+                    self.graph.find_nodes(
+                        "ServiceCategory",
+                        "normalized_name",
+                        normalize_text(constraints.category),
+                    ),
+                    "IN_CATEGORY",
                 )
             )
         if {"day", "open_at"} & exact_fields and (constraints.day or constraints.open_at):
@@ -252,7 +294,7 @@ class KnowledgeGraphQuery:
         if not filters:
             return frozenset(
                 str(node.properties["provider_id"])
-                for node in self.graph.nodes_of_kind("Pantry")
+                for node in self.graph.nodes_of_kind("ServiceProvider")
             )
         candidates = set(filters[0])
         for values in filters[1:]:

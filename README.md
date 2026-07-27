@@ -1,10 +1,14 @@
 # TRACE Public-Service Retrieval Engine
 
-TRACE is a constraint-aware retrieval engine for food-pantry (ideally, any public-service)
-directories. This repository contains the implementation before LLM integration, i.e., only the 'retrieval' part:
+TRACE is a constraint-aware retrieval engine for public-service directories.
+This repository contains the deterministic retrieval implementation before LLM
+integration:
 
-- A deterministic parser for pantry name, city, county, ZIP code, weekday,
-  opening time, and ID-related eligibility constraints.
+- CSV, JSON, and XLSX ingestion with source-specific schema adapters.
+- A normalized `ServiceProvider` model with backward compatibility for pantry data.
+- City, state, and ZIP derivation from structured mailing addresses.
+- A deterministic parser for service category, provider name, city, county, ZIP
+  code, weekday, opening time, and ID-related eligibility constraints.
 - Explicit knowledge graphs (KGs) with typed nodes, edges, properties, indexes, and
   graph traversal for the KG-1, KG-2, and KG-3 ablations.
 - Normalization of free-form hours into day/time intervals.
@@ -19,15 +23,15 @@ Why hasn't LLM been integrated yet? Well...the key aspect of the TRACE framework
 
 ```mermaid
 flowchart LR
-    S["CSV or JSON directory"] --> I["Schema normalization"]
-    I --> P["Pantry records"]
+    S["CSV, JSON, or XLSX directory"] --> I["Schema and address normalization"]
+    I --> P["ServiceProvider records"]
     P --> G["KG-1 / KG-2 / KG-3 property graph"]
     Q["User query"] --> C["Deterministic constraint parser"]
-    C --> X{"City, county, ZIP, or pantry name?"}
+    C --> X{"City, county, ZIP, or provider name?"}
     X -- No --> CL["Ask for location"]
-    X -- Yes --> D{"Time has a weekday?"}
-    D -- No --> CD["Ask for weekday"]
-    D -- Yes --> T["KG traversal"]
+    X -- Yes --> D{"Time given without a weekday?"}
+    D -- Yes --> CD["Ask for weekday"]
+    D -- No --> T["KG traversal"]
     G --> T
     T --> O["Structured result"]
 ```
@@ -43,6 +47,8 @@ You need:
 - Python 3.11 or newer
 - Git, unless you download the repository as a ZIP
 - PowerShell for the commands below
+
+The project has no third-party runtime dependencies.
 
 Verify Python:
 
@@ -97,10 +103,27 @@ The JSON response should contain parsed constraints similar to:
 }
 ```
 
-### 4. Enter your own query manually
+### 4. Test a 211-style XLSX workbook
+
+No CSV conversion is required:
 
 ```powershell
-$query = Read-Host "Enter your pantry query"
+python -m trace_engine.cli `
+  --data "C:\path\to\211_Sample_Dataset.xlsx" `
+  ask "Where do I find shelter in Wichita?" `
+  --variant kg3 `
+  --limit 3
+```
+
+For this schema, TRACE reads `Category (Auto)`, derives city/state/ZIP from
+`Mailing Address`, normalizes `County`, and retains the original address and
+service metadata. If an address is missing, TRACE keeps the derived location
+fields empty rather than inventing them.
+
+### 5. Enter your own query manually
+
+```powershell
+$query = Read-Host "Enter your service query"
 
 python -m trace_engine.cli `
   --data "data/sample/pantries.csv" `
@@ -119,7 +142,7 @@ Where do I find food in Wichita County?
 I need food at 10am
 ```
 
-### 5. Use the PowerShell test script
+### 6. Use the PowerShell test script
 
 Run the included example queries:
 
@@ -136,7 +159,7 @@ powershell -NoProfile -ExecutionPolicy Bypass `
   -Query "Where do I find food in Wichita?"
 ```
 
-### 6. Test with your own CSV
+### 7. Test with your own CSV
 
 ```powershell
 python -m trace_engine.cli `
@@ -146,13 +169,16 @@ python -m trace_engine.cli `
   --limit 3
 ```
 
-For now, the normalized CSV format requires these columns to be present:
+The normalized pantry CSV format uses these core columns:
 
 ```text
 provider_id,name,city,county,zipcode
 ```
 
-### 7. Inspect the knowledge graph
+For richer service-provider schemas and column aliases, see
+[data ingestion](docs/data_ingestion.md).
+
+### 8. Inspect the knowledge graph
 
 Print the KG-3 node and edge counts:
 
@@ -178,9 +204,16 @@ python -m trace_engine.cli `
 | Variant | Graph constraints |
 |---|---|
 | `kg0` | None |
-| `kg1` | Pantry name and location |
-| `kg2` | Pantry name and hours |
-| `kg3` | Pantry name, location, and hours |
+| `kg1` | Provider name, category, and location |
+| `kg2` | Provider name and operating hours |
+| `kg3` | Provider name, category, location, and operating hours |
+
+For example, `Where do I find shelter in Wichita?` resolves `Wichita` as a city,
+maps `shelter` to `Housing & Shelter`, intersects both graph constraints, and
+then ranks the remaining services using their names and descriptive text.
+
+See [data ingestion](docs/data_ingestion.md) for the normalized schema and
+address precedence rules.
 
 ### Up next...
 

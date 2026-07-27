@@ -3,18 +3,28 @@ from __future__ import annotations
 from collections.abc import Sequence
 
 from .constraints import ConstraintParser
-from .models import Pantry, Recommendation, TraceResult
+from .models import QueryConstraints, Recommendation, ServiceProvider, TraceResult
 from .retrieval import DirectoryRetriever
 from .semantic import check_semantic_constraints
 
 
 LOCATION_CLARIFICATION = (
-    "Where are you looking for food? Please provide a city, county, or ZIP code."
+    "Where are you looking for services? Please provide a city, county, or ZIP code."
 )
 
 
 def clarification_for(constraints: QueryConstraints) -> str | None:
     if not constraints.has_retrieval_anchor:
+        if constraints.category == "Food":
+            return (
+                "Where are you looking for food? "
+                "Please provide a city, county, or ZIP code."
+            )
+        if constraints.category:
+            return (
+                f"Where are you looking for {constraints.category} services? "
+                "Please provide a city, county, or ZIP code."
+            )
         return LOCATION_CLARIFICATION
     if constraints.open_at and not constraints.day:
         return f"Which day should I check for availability at {constraints.open_at}?"
@@ -22,7 +32,9 @@ def clarification_for(constraints: QueryConstraints) -> str | None:
 
 
 class TraceEngine:
-    def __init__(self, providers: Sequence[Pantry], variant: str = "kg3") -> None:
+    def __init__(
+        self, providers: Sequence[ServiceProvider], variant: str = "kg3"
+    ) -> None:
         self.providers = tuple(providers)
         self.variant = variant
         self.parser = ConstraintParser(self.providers)
