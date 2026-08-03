@@ -22,17 +22,27 @@ python -m trace_engine.cli `
 - `--variant`: `kg0`, `kg1`, `kg2`, or `kg3`; default `kg3`.
 - `--limit`: maximum accepted recommendations; default 3.
 - `--batch-size`: candidates retrieved before each evidence-check pass; default 3.
+- `--intent-classifier`: `deterministic` or `ollama`; default `deterministic`.
+- `--ollama-model`: local model name; default `qwen3.5:4b`.
+- `--ollama-url`: local API base URL; default `http://127.0.0.1:11434`.
+- `--ollama-timeout`: local classification timeout in seconds; default 120.
+- `--response-generator`: `none` or `ollama`; default `none`. This changes only
+  answer presentation after retrieval.
+- `--response-timeout`: seconds allowed for response generation; default 240.
 
 The JSON response includes:
 
 - `query` and `variant`: the executed request and ablation.
-- `constraints`: parsed name, service category, location, day/time, and semantic
-  constraints.
+- `constraints`: parsed name, service categories, classification source and
+  evidence, location, day/time, and semantic constraints.
 - `clarification`: a targeted question when the request lacks a city, county,
   ZIP code, or provider-name anchor, or when a clock time lacks a weekday;
   otherwise `null`.
 - `candidates_examined`: directory records checked before completion.
 - `recommendations`: grounded records, matched constraints, evidence, and score.
+- `answer`, `response_source`, and `response_error`: optional grounded
+  conversational rendering, its source (`ollama:<model>`, `deterministic`, or
+  `deterministic_fallback`), and the reason for any safe fallback.
 
 The score is a deterministic weighted token-overlap score. Provider-name
 matches receive the strongest weight, category matches receive the next
@@ -47,6 +57,32 @@ python -m trace_engine.cli `
   ask "Where do I find shelter in Wichita?" `
   --variant kg3 --limit 3
 ```
+
+Use local multi-label classification:
+
+```powershell
+python -m trace_engine.cli `
+  --data "C:\path\to\211_Sample_Dataset.xlsx" `
+  ask "I need housing and addiction recovery help in Wichita" `
+  --variant kg3 `
+  --intent-classifier ollama `
+  --limit 5
+```
+
+Add grounded chat-style response generation:
+
+```powershell
+python -m trace_engine.cli `
+  --data "C:\path\to\211_Sample_Dataset.xlsx" `
+  ask "I need housing and addiction recovery help in Wichita" `
+  --variant kg3 `
+  --intent-classifier ollama `
+  --response-generator ollama `
+  --limit 5
+```
+
+See [local LLM intent classification](llm_intent_classification.md) for setup,
+fallback behavior, and the multi-category KG semantics.
 
 ## `list`
 

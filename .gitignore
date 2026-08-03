@@ -10,3 +10,4 @@ work/
 data/raw/
 data/processed/
 .env
+.gradio/

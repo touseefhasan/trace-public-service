@@ -3,6 +3,8 @@ from __future__ import annotations
 from collections.abc import Sequence
 
 from .constraints import ConstraintParser
+from .generation import GeneratedAnswer, ResponseGenerator, deterministic_chat_answer
+from .intent import CategoryClassifier
 from .models import QueryConstraints, Recommendation, ServiceProvider, TraceResult
 from .retrieval import DirectoryRetriever
 from .semantic import check_semantic_constraints
@@ -15,14 +17,15 @@ LOCATION_CLARIFICATION = (
 
 def clarification_for(constraints: QueryConstraints) -> str | None:
     if not constraints.has_retrieval_anchor:
-        if constraints.category == "Food":
+        if constraints.categories == ("Food",):
             return (
                 "Where are you looking for food? "
                 "Please provide a city, county, or ZIP code."
             )
-        if constraints.category:
+        if constraints.categories:
+            services = " or ".join(constraints.categories)
             return (
-                f"Where are you looking for {constraints.category} services? "
+                f"Where are you looking for {services} services? "
                 "Please provide a city, county, or ZIP code."
             )
         return LOCATION_CLARIFICATION
@@ -33,12 +36,20 @@ def clarification_for(constraints: QueryConstraints) -> str | None:
 
 class TraceEngine:
     def __init__(
-        self, providers: Sequence[ServiceProvider], variant: str = "kg3"
+        self,
+        providers: Sequence[ServiceProvider],
+        variant: str = "kg3",
+        *,
+        category_classifier: CategoryClassifier | None = None,
+        response_generator: ResponseGenerator | None = None,
     ) -> None:
         self.providers = tuple(providers)
         self.variant = variant
-        self.parser = ConstraintParser(self.providers)
+        self.parser = ConstraintParser(
+            self.providers, category_classifier=category_classifier
+        )
         self.retriever = DirectoryRetriever(self.providers, variant)
+        self.response_generator = response_generator
 
     def recommend(
         self,
@@ -59,6 +70,8 @@ class TraceEngine:
                 variant=self.variant,
                 constraints=constraints,
                 clarification=clarification,
+                answer=clarification if self.response_generator else None,
+                response_source="deterministic" if self.response_generator else None,
             )
 
         recommendations: list[Recommendation] = []
@@ -93,10 +106,27 @@ class TraceEngine:
             if len(recommendations) == limit:
                 break
 
+        recommendation_tuple = tuple(recommendations)
+        answer = None
+        response_source = None
+        response_error = None
+        if self.response_generator:
+            try:
+                generated = self.response_generator.generate(query, recommendation_tuple)
+            except RuntimeError as exc:
+                generated = deterministic_chat_answer(recommendation_tuple)
+                generated = GeneratedAnswer(generated.text, "deterministic_fallback")
+                response_error = str(exc)
+            answer = generated.text
+            response_source = generated.source
+
         return TraceResult(
             query=query,
             variant=self.variant,
             constraints=constraints,
-            recommendations=tuple(recommendations),
+            recommendations=recommendation_tuple,
             candidates_examined=examined,
+            answer=answer,
+            response_source=response_source,
+            response_error=response_error,
         )

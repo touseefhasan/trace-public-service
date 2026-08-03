@@ -1,7 +1,14 @@
 param(
     [string]$DataPath,
     [string]$PythonPath,
-    [string]$Query
+    [string]$Query,
+    [ValidateSet("deterministic", "ollama")]
+    [string]$IntentClassifier = "deterministic",
+    [string]$OllamaModel = "qwen3.5:4b",
+    [double]$OllamaTimeout = 120,
+    [double]$ResponseTimeout = 240,
+    [ValidateSet("list", "chat")]
+    [string]$ResponseStyle = "list"
 )
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
@@ -16,6 +23,7 @@ if (-not $PythonPath) {
 }
 
 $env:PYTHONPATH = Join-Path $repoRoot "src"
+$responseGenerator = if ($ResponseStyle -eq "chat") { "ollama" } else { "none" }
 
 # Pass -Query for one manual question. Without it, these examples are used.
 $queries = if ($Query) {
@@ -37,6 +45,11 @@ foreach ($query in $queries) {
         --data $DataPath `
         ask $query `
         --variant kg3 `
+        --intent-classifier $IntentClassifier `
+        --ollama-model $OllamaModel `
+        --ollama-timeout $OllamaTimeout `
+        --response-generator $responseGenerator `
+        --response-timeout $ResponseTimeout `
         --limit 3
 
     if ($LASTEXITCODE -ne 0) {
@@ -50,6 +63,17 @@ foreach ($query in $queries) {
 
     if ($result.clarification) {
         Write-Host "CLARIFICATION: $($result.clarification)" -ForegroundColor Yellow
+        continue
+    }
+
+    if ($ResponseStyle -eq "chat") {
+        Write-Host "TRACE RESPONSE" -ForegroundColor Green
+        Write-Host $result.answer
+        Write-Host "`nResponse source: $($result.response_source)"
+        if ($result.response_error) {
+            Write-Host "Generation fallback reason: $($result.response_error)" -ForegroundColor Yellow
+        }
+        Write-Host "Candidates examined: $($result.candidates_examined)"
         continue
     }
 

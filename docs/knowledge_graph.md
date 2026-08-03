@@ -1,56 +1,62 @@
-# Knowledge graph implementation
+# Knowledge-graph implementation
 
-KG-1, KG-2, and KG-3 are materialized as deterministic property graphs. They
-are not aliases for SQL-style filters.
+TRACE currently uses a deterministic in-memory property graph implemented in
+Python. It does **not** use Neo4j, Cypher, RDF, a graph server, or a persistent
+graph database. The graph is materialized from normalized provider records each
+time a `TraceEngine` starts.
 
-```mermaid
-graph LR
-  P -->|IN_CATEGORY| SC["ServiceCategory"]
-  P -->|LOCATED_IN_CITY| C["City"]
-  P -->|LOCATED_IN_COUNTY| CO["County"]
-  P -->|LOCATED_IN_ZIPCODE| Z["ZipCode"]
-  P -->|HAS_HOURS| H["Hours"]
-  H -->|OPEN_ON<br/>start_minute, end_minute| D["Day"]
+## Node types
+
+| Node kind | Key properties | Purpose |
+|---|---|---|
+| `ServiceProvider` | `provider_id`, `name`, `normalized_name` | One node per directory record |
+| `ServiceCategory` | `name`, `normalized_name` | Shared canonical service category |
+| `City` | `name`, `normalized_name` | Shared city constraint |
+| `County` | `name`, `normalized_name` | Shared county constraint |
+| `ZipCode` | `value` | Shared ZIP-code constraint |
+| `Hours` | `raw_text` | One operating-hours node per provider |
+| `Day` | `name` | Shared normalized weekday |
+
+## Edge types
+
+```text
+(ServiceProvider)-[:IN_CATEGORY]->(ServiceCategory)
+(ServiceProvider)-[:LOCATED_IN_CITY]->(City)
+(ServiceProvider)-[:LOCATED_IN_COUNTY]->(County)
+(ServiceProvider)-[:LOCATED_IN_ZIPCODE]->(ZipCode)
+(ServiceProvider)-[:HAS_HOURS]->(Hours)
+(Hours)-[:OPEN_ON {start_minute, end_minute}]->(Day)
 ```
 
-## Variants
+`OPEN_ON` carries normalized interval properties so a question such as “open
+Saturday at 10am” can be checked as a graph constraint rather than a raw-text
+match.
 
-- KG-1 materializes ServiceProvider, ServiceCategory, City, County, and ZipCode
-  nodes plus category and location edges.
-- KG-2 materializes ServiceProvider, Hours, and Day nodes plus schedule edges.
-- KG-3 materializes the union of KG-1 and KG-2.
-- KG-0 remains the graph-free text baseline.
+## How it participates in retrieval
 
-Structural queries resolve location or day nodes, traverse incoming typed edges
-to ServiceProvider nodes, and intersect the resulting provider-ID sets under
-strict AND semantics. Text ranking runs only over graph-selected candidates.
+The query parser first creates structured constraints. Graph traversal obtains
+a provider-ID set for each applicable constraint. Multiple requested categories
+are unioned with one another, while different dimensions are intersected:
 
-Hours remain evidence preserving: every Hours node stores the original scraped
-text. `OPEN_ON` edges are added only when a time interval can be parsed without
-guessing. This deliberately exposes the current normalization coverage instead
-of treating unknown schedules as open.
-
-Location and category nodes are created only when the normalized provider has a
-value. Missing mailing addresses therefore do not produce empty City or ZipCode
-nodes. County values may still be available independently from the source.
-
-## Inspection
-
-Print graph counts:
-
-```powershell
-$env:PYTHONPATH = "src"
-python -m trace_engine.cli --data data/sample/pantries.csv graph --variant kg3
+```text
+(Housing & Shelter OR Legal) AND city=Wichita AND open=Monday@10:00
 ```
 
-Export all nodes and edges:
+Only providers surviving that graph operation enter lexical ranking and the
+subsequent semantic checks. The optional LLM classifies categories before this
+step and phrases the final answer after it; it does not alter graph edges or add
+providers.
 
-```powershell
-python -m trace_engine.cli `
-  --data data/sample/pantries.csv `
-  graph --variant kg3 --output work/kg3.json
-```
+## Ablation variants
 
-The embedded graph is the reference implementation used by tests and local
-evaluation. A future Neo4j adapter can implement the same query interface for
-deployment or interactive graph exploration.
+| Variant | Materialized constraints |
+|---|---|
+| `kg0` | No graph; lexical baseline |
+| `kg1` | Provider name, category, city, county, and ZIP code |
+| `kg2` | Provider name and operating hours |
+| `kg3` | All KG-1 and KG-2 constraints |
+
+The custom graph keeps experiments dependency-free and makes the ablations easy
+to reproduce. Neo4j could later replace the storage/traversal layer for a much
+larger or continuously updated directory, but it is not required for the current
+dataset size.

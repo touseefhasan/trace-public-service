@@ -11,9 +11,13 @@ requires-python = ">=3.11"
 authors = [{ name = "TRACE contributors" }]
 dependencies = []
 
+[project.optional-dependencies]
+ui = ["gradio>=5,<7"]
+
 [project.scripts]
 trace-service = "trace_engine.cli:main"
 trace-pantry = "trace_engine.cli:main"
+trace-chat = "trace_engine.gradio_app:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

@@ -277,17 +277,18 @@ class KnowledgeGraphQuery:
                     "LOCATED_IN_ZIPCODE",
                 )
             )
-        if "category" in exact_fields and constraints.category:
-            filters.append(
-                self._providers_incoming_to(
+        if "category" in exact_fields and constraints.categories:
+            category_candidates: set[str] = set()
+            for category in constraints.categories:
+                category_candidates |= self._providers_incoming_to(
                     self.graph.find_nodes(
                         "ServiceCategory",
                         "normalized_name",
-                        normalize_text(constraints.category),
+                        normalize_text(category),
                     ),
                     "IN_CATEGORY",
                 )
-            )
+            filters.append(category_candidates)
         if {"day", "open_at"} & exact_fields and (constraints.day or constraints.open_at):
             filters.append(self._hours_candidates(constraints.day, constraints.open_at))
 

@@ -67,9 +67,20 @@ class QueryConstraints:
     zipcode: str | None = None
     provider_name: str | None = None
     category: str | None = None
+    categories: tuple[str, ...] = ()
+    category_source: str = "deterministic"
+    category_evidence: tuple[str, ...] = ()
     day: str | None = None
     open_at: str | None = None
     semantic: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        categories = tuple(dict.fromkeys(item for item in self.categories if item))
+        if self.category and not categories:
+            categories = (self.category,)
+        if categories and not self.category:
+            object.__setattr__(self, "category", categories[0])
+        object.__setattr__(self, "categories", categories)
 
     @property
     def has_retrieval_anchor(self) -> bool:
@@ -84,7 +95,7 @@ class QueryConstraints:
                 self.county,
                 self.zipcode,
                 self.provider_name,
-                self.category,
+                self.categories,
                 self.day,
                 self.open_at,
             )
@@ -93,6 +104,8 @@ class QueryConstraints:
     def as_dict(self) -> dict[str, Any]:
         value = asdict(self)
         value["semantic"] = list(self.semantic)
+        value["categories"] = list(self.categories)
+        value["category_evidence"] = list(self.category_evidence)
         return value
 
 
@@ -120,6 +133,9 @@ class TraceResult:
     recommendations: tuple[Recommendation, ...] = field(default_factory=tuple)
     clarification: str | None = None
     candidates_examined: int = 0
+    answer: str | None = None
+    response_source: str | None = None
+    response_error: str | None = None
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -128,5 +144,8 @@ class TraceResult:
             "constraints": self.constraints.as_dict(),
             "clarification": self.clarification,
             "candidates_examined": self.candidates_examined,
+            "answer": self.answer,
+            "response_source": self.response_source,
+            "response_error": self.response_error,
             "recommendations": [item.as_dict() for item in self.recommendations],
         }

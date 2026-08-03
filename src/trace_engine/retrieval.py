@@ -68,9 +68,9 @@ class DirectoryRetriever:
             labels.append(f"county={provider.county}")
         if constraints.zipcode and provider.zipcode == constraints.zipcode:
             labels.append(f"zipcode={provider.zipcode}")
-        if constraints.category and normalize_text(provider.category) == normalize_text(
-            constraints.category
-        ):
+        if constraints.categories and normalize_text(provider.category) in {
+            normalize_text(category) for category in constraints.categories
+        }:
             labels.append(f"category={provider.category}")
         if constraints.day and is_open(provider.hours, constraints.day, constraints.open_at):
             label = f"open={constraints.day}"
@@ -91,6 +91,33 @@ class DirectoryRetriever:
         return (3 * name_overlap + 2 * category_overlap + record_overlap) / len(
             query_tokens
         )
+
+    @staticmethod
+    def _category_diversified(
+        ranked: list[RankedCandidate], categories: tuple[str, ...]
+    ) -> list[RankedCandidate]:
+        """Place the best candidate for each requested category before extras."""
+        if len(categories) < 2:
+            return ranked
+        selected: list[RankedCandidate] = []
+        selected_ids: set[str] = set()
+        for category in categories:
+            normalized_category = normalize_text(category)
+            candidate = next(
+                (
+                    item
+                    for item in ranked
+                    if item.provider.provider_id not in selected_ids
+                    and normalize_text(item.provider.category) == normalized_category
+                ),
+                None,
+            )
+            if candidate is not None:
+                selected.append(candidate)
+                selected_ids.add(candidate.provider.provider_id)
+        return selected + [
+            item for item in ranked if item.provider.provider_id not in selected_ids
+        ]
 
     def retrieve(
         self,
@@ -116,4 +143,5 @@ class DirectoryRetriever:
             if allowed_ids is None or provider.provider_id in allowed_ids
         ]
         ranked.sort(key=lambda item: (-item.score, item.provider.name.casefold()))
+        ranked = self._category_diversified(ranked, constraints.categories)
         return tuple(ranked[offset : offset + limit])

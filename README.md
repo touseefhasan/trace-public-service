@@ -1,14 +1,16 @@
 # TRACE Public-Service Retrieval Engine
 
 TRACE is a constraint-aware retrieval engine for public-service directories.
-This repository contains the deterministic retrieval implementation before LLM
-integration:
+This repository contains the constraint-aware retrieval pipeline, optional
+local-LLM intent and response stages, and a Gradio chatbot:
 
 - CSV, JSON, and XLSX ingestion with source-specific schema adapters.
 - A normalized `ServiceProvider` model with backward compatibility for pantry data.
 - City, state, and ZIP derivation from structured mailing addresses.
 - A deterministic parser for service category, provider name, city, county, ZIP
   code, weekday, opening time, and ID-related eligibility constraints.
+- Optional local Ollama classification of one or more service categories, with
+  schema validation and deterministic fallback.
 - Explicit knowledge graphs (KGs) with typed nodes, edges, properties, indexes, and
   graph traversal for the KG-1, KG-2, and KG-3 ablations.
 - Normalization of free-form hours into day/time intervals.
@@ -16,8 +18,11 @@ integration:
 - Location clarification when a query lacks a city, county, ZIP code, or named
   provider, plus weekday clarification when a time is supplied without a day.
 - A validated 1,000-query benchmark.
+- A Gradio chat interface that can run locally or create a temporary public URL.
 
-Why hasn't LLM been integrated yet? Well...the key aspect of the TRACE framework is the retrieval process. Retrieval is the cornerstone! LLMs (and a full-fledged chatbot!) coming soon...
+The LLM is deliberately kept outside provider selection: the knowledge graph
+retrieves grounded directory records, and the LLM classifies intent and phrases
+those records conversationally.
 
 ## Architecture at a glance
 
@@ -48,7 +53,8 @@ You need:
 - Git, unless you download the repository as a ZIP
 - PowerShell for the commands below
 
-The project has no third-party runtime dependencies.
+Core retrieval has no third-party runtime dependencies. The web interface uses
+the optional `ui` dependency group.
 
 Verify Python:
 
@@ -61,6 +67,56 @@ If Windows cannot find `python`, try:
 ```powershell
 py -3.11 --version
 ```
+
+## Launch the Gradio chatbot
+
+Install the repository and its optional web interface from the repository root:
+
+```powershell
+py -3.11 -m pip install -e ".[ui]"
+```
+
+On the Codex Windows setup used during development, where `py` and `python` may
+not be on `PATH`, install Gradio with the bundled runtime instead:
+
+```powershell
+$python = "$env:USERPROFILE\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe"
+& $python -m pip install gradio
+```
+
+Start a local-only chatbot:
+
+```powershell
+py -3.11 -m trace_engine.gradio_app `
+  --data ".\211_Sample_Dataset.xlsx" `
+  --inbrowser
+```
+
+To create a temporary public URL that anyone with the link can open, add
+`--share`:
+
+```powershell
+py -3.11 -m trace_engine.gradio_app `
+  --data ".\211_Sample_Dataset.xlsx" `
+  --share
+```
+
+The repository also includes a launcher that finds the bundled Python and uses
+the local `211_Sample_Dataset.xlsx` automatically:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass `
+  -File ".\scripts\start_chat.ps1" `
+  -Public
+```
+
+Keep that PowerShell process and Ollama running while the link is in use. The
+temporary link stops working when the process exits. For a link protected by a
+username and password, add `--username "demo" --password "choose-a-password"`.
+
+The app defaults to `qwen3.5:4b` for both multi-label classification and grounded
+response generation. If Ollama is unavailable, deterministic fallbacks keep the
+app usable, with less capable category interpretation.
 
 ### 1. Download the repository
 
@@ -199,6 +255,9 @@ python -m trace_engine.cli `
   --output "work/kg3.json"
 ```
 
+See [knowledge-graph implementation](docs/knowledge_graph.md) for the complete
+node/edge schema and traversal semantics.
+
 ### Retrieval variants
 
 | Variant | Graph constraints |
@@ -219,4 +278,49 @@ address precedence rules.
 
 <img width="859" height="471" alt="image" src="https://github.com/user-attachments/assets/3cce002b-151e-42ee-b7bb-eae92cab5ead" />
 
-According to our architecture, the retrieved records are then passed along to the LLM for final response generation that goes to the user in the end. So the next step is to include the LLM pipeline and close the loop.
+TRACE supports an optional local LLM at two deliberately separated stages:
+multi-label category classification before retrieval and grounded chat-response
+generation after retrieval. The knowledge graph—not the LLM—still selects the
+providers.
+
+### Try local multi-label intent classification
+
+After installing [Ollama](https://ollama.com/download/windows), download the
+default local model:
+
+```powershell
+ollama pull qwen3.5:4b
+```
+
+Then classify one or more service needs before KG retrieval:
+
+```powershell
+python -m trace_engine.cli `
+  --data "C:\path\to\211_Sample_Dataset.xlsx" `
+  ask "I need transitional housing and addiction recovery help in Wichita" `
+  --variant kg3 `
+  --intent-classifier ollama `
+  --limit 5
+```
+
+Categories use OR semantics with each other and remain AND-constrained by
+location and operating hours. If Ollama is unavailable, TRACE marks the result
+as `deterministic_fallback`. See
+[local LLM intent classification](docs/llm_intent_classification.md) for model,
+output, and testing details.
+
+For conversational output containing the same retrieved provider facts, use the
+PowerShell wrapper's chat mode:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass `
+  -File ".\scripts\test_retrieval.ps1" `
+  -DataPath "C:\path\to\211_Sample_Dataset.xlsx" `
+  -Query "I need transitional housing and addiction recovery help in Wichita" `
+  -IntentClassifier ollama `
+  -ResponseStyle chat
+```
+
+TRACE validates that the generated answer retains every supplied provider fact.
+If generation fails or changes a fact, it automatically uses a deterministic
+chat formatter instead.
