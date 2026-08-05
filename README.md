@@ -285,14 +285,19 @@ providers.
 
 ### Try local multi-label intent classification
 
-After installing [Ollama](https://ollama.com/download/windows), download the
-default local model:
+Install Ollama on Powershell: 
+
+```powershell
+irm https://ollama.com/install.ps1 | iex
+```
+
+After installing Ollama, download any local model (we're using Qwen 3.5 4B for this experiment):
 
 ```powershell
 ollama pull qwen3.5:4b
 ```
 
-Then classify one or more service needs before KG retrieval:
+Then classify one or more service needs in your query:
 
 ```powershell
 python -m trace_engine.cli `
