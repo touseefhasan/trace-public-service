@@ -256,7 +256,11 @@ User query: {json.dumps(query, ensure_ascii=False)}
             "format": self._schema(categories),
             "stream": False,
             "think": False,
-            "options": {"temperature": 0},
+            "options": {
+                "temperature": 0,
+                "num_ctx": 2048,
+                "num_predict": 128,
+            },
         }
         body = json.dumps(payload).encode("utf-8")
         api_request = request.Request(

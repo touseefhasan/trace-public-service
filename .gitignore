@@ -11,3 +11,6 @@ data/raw/
 data/processed/
 .env
 .gradio/
+outputs/
+tmp/
+211_Sample_Dataset.xlsx

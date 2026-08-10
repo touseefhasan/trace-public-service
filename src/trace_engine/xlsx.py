@@ -37,12 +37,20 @@ def _shared_strings(archive: ZipFile) -> tuple[str, ...]:
     return tuple(_text(item) for item in root.findall(f"{{{MAIN_NS}}}si"))
 
 
-def _first_sheet_path(archive: ZipFile) -> str:
+def _sheet_path(archive: ZipFile, sheet_name: str | None = None) -> str:
     workbook = ET.fromstring(archive.read("xl/workbook.xml"))
-    first_sheet = workbook.find(f".//{{{MAIN_NS}}}sheet")
-    if first_sheet is None:
+    sheets = workbook.findall(f".//{{{MAIN_NS}}}sheet")
+    if not sheets:
         raise ValueError("XLSX workbook does not contain a worksheet")
-    relationship_id = first_sheet.attrib.get(f"{{{REL_NS}}}id")
+    selected = sheets[0]
+    if sheet_name is not None:
+        selected = next(
+            (sheet for sheet in sheets if sheet.attrib.get("name") == sheet_name),
+            None,
+        )
+        if selected is None:
+            raise ValueError(f"XLSX workbook does not contain worksheet: {sheet_name}")
+    relationship_id = selected.attrib.get(f"{{{REL_NS}}}id")
     if not relationship_id:
         raise ValueError("XLSX worksheet is missing its relationship ID")
 
@@ -74,12 +82,15 @@ def _cell_value(cell: ET.Element, shared_strings: tuple[str, ...]) -> str:
     return value
 
 
-def read_first_worksheet(path: str | Path) -> list[dict[str, str]]:
-    """Read a simple directory table from the first worksheet using the standard library."""
+def read_worksheet(
+    path: str | Path,
+    sheet_name: str | None = None,
+) -> list[dict[str, str]]:
+    """Read a simple table from a named or first worksheet using the standard library."""
 
     with ZipFile(path) as archive:
         shared_strings = _shared_strings(archive)
-        sheet = ET.fromstring(archive.read(_first_sheet_path(archive)))
+        sheet = ET.fromstring(archive.read(_sheet_path(archive, sheet_name)))
 
     matrix: list[list[str]] = []
     for row in sheet.findall(f".//{{{MAIN_NS}}}sheetData/{{{MAIN_NS}}}row"):
@@ -107,3 +118,9 @@ def read_first_worksheet(path: str | Path) -> list[dict[str, str]]:
             }
         )
     return records
+
+
+def read_first_worksheet(path: str | Path) -> list[dict[str, str]]:
+    """Read a simple directory table from the first worksheet."""
+
+    return read_worksheet(path)
